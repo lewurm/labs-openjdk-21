@@ -22,6 +22,7 @@
  *
  */
 
+#ifndef __COSMOPOLITAN__
 #include "precompiled.hpp"
 #include "runtime/orderAccess.hpp"
 #include "runtime/os.hpp"
@@ -85,3 +86,4 @@ void LinuxWaitBarrier::wait(int barrier_tag) {
     // Error EAGAIN: we are already disarmed and so will pass the check.
   } while (barrier_tag == _futex_barrier);
 }
+#endif

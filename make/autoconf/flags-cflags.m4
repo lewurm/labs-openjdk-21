@@ -36,7 +36,7 @@ AC_DEFUN([FLAGS_SETUP_SHARED_LIBS],
 [
   if test "x$TOOLCHAIN_TYPE" = xgcc; then
     # Default works for linux, might work on other platforms as well.
-    SHARED_LIBRARY_FLAGS='-shared'
+    SHARED_LIBRARY_FLAGS='' # does not work with cosmocc '-shared'
     SET_EXECUTABLE_ORIGIN='-Wl,-rpath,\$$ORIGIN[$]1'
     SET_SHARED_LIBRARY_ORIGIN="-Wl,-z,origin $SET_EXECUTABLE_ORIGIN"
     SET_SHARED_LIBRARY_NAME='-Wl,-soname=[$]1'
@@ -517,9 +517,10 @@ AC_DEFUN([FLAGS_SETUP_CFLAGS_HELPER],
   fi
 
   if test "x$TOOLCHAIN_TYPE" = xgcc; then
-    TOOLCHAIN_CFLAGS_JVM="$TOOLCHAIN_CFLAGS_JVM -fstack-protector"
+    # cosmocc is not happy with -fstack-protector
+    # TOOLCHAIN_CFLAGS_JVM="$TOOLCHAIN_CFLAGS_JVM -fstack-protector"
     # cosmocc is not happy with -pipe
-    TOOLCHAIN_CFLAGS_JDK="-fstack-protector"
+    TOOLCHAIN_CFLAGS_JDK="" # "-fstack-protector"
     # reduce lib size on linux in link step, this needs also special compile flags
     # do this on s390x also for libjvm (where serviceability agent is not supported)
     if test "x$ENABLE_LINKTIME_GC" = xtrue; then

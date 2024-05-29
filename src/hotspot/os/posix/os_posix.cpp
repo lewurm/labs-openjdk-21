@@ -307,7 +307,13 @@ static int util_posix_fallocate(int fd, off_t offset, off_t len) {
   }
   return -1;
 #else
+#ifdef __COSMOPOLITAN__
+  printf("posix_fallocate: wat?!\n");
+  exit(2);
+  return -1;
+#else
   return posix_fallocate(fd, offset, len);
+#endif
 #endif
 }
 

@@ -355,6 +355,7 @@ LinuxAttachOperation* LinuxAttachListener::dequeue() {
       return nullptr;      // log a warning?
     }
 
+#if 0
     // get the credentials of the peer and check the effective uid/guid
     struct ucred cred_info;
     socklen_t optlen = sizeof(cred_info);
@@ -370,7 +371,7 @@ LinuxAttachOperation* LinuxAttachListener::dequeue() {
       ::close(s);
       continue;
     }
-
+#endif
     // peer credential look okay so we read the request
     LinuxAttachOperation* op = read_request(s);
     if (op == nullptr) {

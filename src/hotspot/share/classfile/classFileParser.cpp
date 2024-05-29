@@ -1871,6 +1871,10 @@ void ClassFileParser::throwIllegalSignature(const char* type,
       name->as_C_string(), _class_name->as_C_string(), sig->as_C_string());
 }
 
+#ifdef __COSMOPOLITAN__
+#undef privileged
+#endif
+
 AnnotationCollector::ID
 AnnotationCollector::annotation_index(const ClassLoaderData* loader_data,
                                       const Symbol* name,

@@ -48,7 +48,7 @@ AC_DEFUN_ONCE([LIB_DETERMINE_DEPENDENCIES],
   else
     # All other instances need X11, even if building headless only, libawt still
     # needs X11 headers.
-    NEEDS_LIB_X11=true
+    NEEDS_LIB_X11=false
   fi
 
   # Check if fontconfig is needed

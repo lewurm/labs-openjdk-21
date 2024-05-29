@@ -107,12 +107,16 @@
 # include <syscall.h>
 # include <sys/sysinfo.h>
 # include <sys/ipc.h>
+#ifndef __COSMOPOLITAN__
 # include <sys/shm.h>
+#endif
 # include <link.h>
 # include <stdint.h>
 # include <inttypes.h>
 # include <sys/ioctl.h>
+#ifndef __COSMOPOLITAN__
 # include <linux/elf-em.h>
+#endif
 #ifdef __GLIBC__
 # include <malloc.h>
 #endif
@@ -574,16 +578,21 @@ extern "C" void breakpoint() {
 
 void os::Linux::libpthread_init() {
   // Save glibc and pthread version strings.
+#ifndef __COSMOPOLITAN__
 #if !defined(_CS_GNU_LIBC_VERSION) || \
     !defined(_CS_GNU_LIBPTHREAD_VERSION)
   #error "glibc too old (< 2.3.2)"
 #endif
+#endif
 
-#ifdef MUSL_LIBC
+#if defined(MUSL_LIBC)
   // confstr() from musl libc returns EINVAL for
   // _CS_GNU_LIBC_VERSION and _CS_GNU_LIBPTHREAD_VERSION
   os::Linux::set_libc_version("musl - unknown");
   os::Linux::set_libpthread_version("musl - unknown");
+#elif defined(__COSMOPOLITAN__)
+  os::Linux::set_libc_version("cosmo - unknown");
+  os::Linux::set_libpthread_version("cosmo - unknown");
 #else
   size_t n = confstr(_CS_GNU_LIBC_VERSION, nullptr, 0);
   assert(n > 0, "cannot retrieve glibc version");
@@ -1424,6 +1433,9 @@ const char* os::get_temp_directory() { return "/tmp"; }
 
 // check if addr is inside libjvm.so
 bool os::address_is_in_vm(address addr) {
+#ifdef __COSMOPOLITAN__
+  /* for native-image we do not care about this check.  dlinfo support missing in cosmo */
+#else
   static address libjvm_base_addr;
   Dl_info dlinfo;
 
@@ -1437,13 +1449,16 @@ bool os::address_is_in_vm(address addr) {
   if (dladdr((void *)addr, &dlinfo) != 0) {
     if (libjvm_base_addr == (address)dlinfo.dli_fbase) return true;
   }
-
+#endif
   return false;
 }
 
 bool os::dll_address_to_function_name(address addr, char *buf,
                                       int buflen, int *offset,
                                       bool demangle) {
+#ifdef __COSMOPOLITAN__
+  /* for native-image we do not care about this check.  dlinfo support missing in cosmo */
+#else
   // buf is not optional, but offset is optional
   assert(buf != nullptr, "sanity check");
 
@@ -1469,11 +1484,15 @@ bool os::dll_address_to_function_name(address addr, char *buf,
 
   buf[0] = '\0';
   if (offset != nullptr) *offset = -1;
+#endif
   return false;
 }
 
 bool os::dll_address_to_library_name(address addr, char* buf,
                                      int buflen, int* offset) {
+#ifdef __COSMOPOLITAN__
+  /* for native-image we do not care about this check.  dlinfo support missing in cosmo */
+#else
   // buf is not optional, but offset is optional
   assert(buf != nullptr, "sanity check");
 
@@ -1489,6 +1508,7 @@ bool os::dll_address_to_library_name(address addr, char* buf,
   }
   buf[0] = '\0';
   if (offset) *offset = -1;
+#endif
   return false;
 }
 
@@ -1581,6 +1601,9 @@ void * os::dll_load(const char *filename, char *ebuf, int ebuflen) {
     return result;
   }
 
+#ifndef __COSMOPOLITAN__
+  /* need some APE */
+
   Elf32_Ehdr elf_head;
   int diag_msg_max_length=ebuflen-strlen(ebuf);
   char* diag_msg_buf=ebuf+strlen(ebuf);
@@ -1642,10 +1665,13 @@ void * os::dll_load(const char *filename, char *ebuf, int ebuflen) {
 #endif
 
   static const arch_t arch_array[]={
+#ifndef __COSMOPOLITAN__
     {EM_386,         EM_386,     ELFCLASS32, ELFDATA2LSB, (char*)"IA 32"},
     {EM_486,         EM_386,     ELFCLASS32, ELFDATA2LSB, (char*)"IA 32"},
     {EM_IA_64,       EM_IA_64,   ELFCLASS64, ELFDATA2LSB, (char*)"IA 64"},
+#endif
     {EM_X86_64,      EM_X86_64,  ELFCLASS64, ELFDATA2LSB, (char*)"AMD 64"},
+#ifndef __COSMOPOLITAN__
     {EM_SPARC,       EM_SPARC,   ELFCLASS32, ELFDATA2MSB, (char*)"Sparc 32"},
     {EM_SPARC32PLUS, EM_SPARC,   ELFCLASS32, ELFDATA2MSB, (char*)"Sparc 32"},
     {EM_SPARCV9,     EM_SPARCV9, ELFCLASS64, ELFDATA2MSB, (char*)"Sparc v9 64"},
@@ -1665,13 +1691,16 @@ void * os::dll_load(const char *filename, char *ebuf, int ebuflen) {
     {EM_MIPS,        EM_MIPS,    ELFCLASS32, ELFDATA2MSB, (char*)"MIPS"},
     {EM_PARISC,      EM_PARISC,  ELFCLASS32, ELFDATA2MSB, (char*)"PARISC"},
     {EM_68K,         EM_68K,     ELFCLASS32, ELFDATA2MSB, (char*)"M68k"},
+#endif
     {EM_AARCH64,     EM_AARCH64, ELFCLASS64, ELFDATA2LSB, (char*)"AARCH64"},
+#ifndef __COSMOPOLITAN__
 #ifdef _LP64
     {EM_RISCV,       EM_RISCV,   ELFCLASS64, ELFDATA2LSB, (char*)"RISCV64"},
 #else
     {EM_RISCV,       EM_RISCV,   ELFCLASS32, ELFDATA2LSB, (char*)"RISCV32"},
 #endif
     {EM_LOONGARCH,   EM_LOONGARCH, ELFCLASS64, ELFDATA2LSB, (char*)"LoongArch"},
+#endif
   };
 
 #if  (defined IA32)
@@ -1769,6 +1798,7 @@ void * os::dll_load(const char *filename, char *ebuf, int ebuflen) {
                (int) lib_arch.elf_class * 32, arch_array[running_arch_index].elf_class * 32);
     return nullptr;
   }
+#endif
 
   return nullptr;
 }
@@ -1829,11 +1859,17 @@ const char* os::Linux::dll_path(void* lib) {
   const char* l_path = nullptr;
   assert(lib != nullptr, "dll_path parameter must not be null");
 
+#ifdef __COSMOPOLITAN__
+  printf("urgh: missing dlinfo\n");
+  exit(1);
+  return nullptr;
+#else
   int res_dli = ::dlinfo(lib, RTLD_DI_LINKMAP, &lmap);
   if (res_dli == 0) {
     l_path = lmap->l_name;
   }
   return l_path;
+#endif
 }
 
 static unsigned count_newlines(const char* s) {
@@ -2980,17 +3016,25 @@ extern "C" JNIEXPORT void numa_error(char *where) { }
 // Handle request to load libnuma symbol version 1.1 (API v1). If it fails
 // load symbol from base version instead.
 void* os::Linux::libnuma_dlsym(void* handle, const char *name) {
+#ifdef __COSMOPOLITAN__
+  return nullptr;
+#else
   void *f = dlvsym(handle, name, "libnuma_1.1");
   if (f == nullptr) {
     f = dlsym(handle, name);
   }
   return f;
+#endif
 }
 
 // Handle request to load libnuma symbol version 1.2 (API v2) only.
 // Return null if the symbol is not defined in this particular version.
 void* os::Linux::libnuma_v2_dlsym(void* handle, const char* name) {
+#ifdef __COSMOPOLITAN__
+  return nullptr;
+#else
   return dlvsym(handle, name, "libnuma_1.2");
+#endif
 }
 
 // Check numa dependent syscalls
@@ -3589,6 +3633,9 @@ bool os::Linux::hugetlbfs_sanity_check(bool warn, size_t page_size) {
 }
 
 bool os::Linux::shm_hugetlbfs_sanity_check(bool warn, size_t page_size) {
+#ifdef __COSMOPOLITAN__
+  return false;
+#else
   // Try to create a large shared memory segment.
   int shmid = shmget(IPC_PRIVATE, page_size, SHM_HUGETLB|IPC_CREAT|SHM_R|SHM_W);
   if (shmid == -1) {
@@ -3610,6 +3657,7 @@ bool os::Linux::shm_hugetlbfs_sanity_check(bool warn, size_t page_size) {
   // Managed to create a segment, now delete it.
   shmctl(shmid, IPC_RMID, nullptr);
   return true;
+#endif
 }
 
 // From the coredump_filter documentation:
@@ -3892,6 +3940,7 @@ void os::large_page_init() {
     shm_warning_format(str " (error = %d)", err);  \
   } while (0)
 
+#ifndef __COSMOPOLITAN__
 static char* shmat_with_alignment(int shmid, size_t bytes, size_t alignment) {
   assert(is_aligned(bytes, alignment), "Must be divisible by the alignment");
 
@@ -3947,6 +3996,7 @@ static char* shmat_at_address(int shmid, char* req_addr) {
 }
 
 static char* shmat_large_pages(int shmid, size_t bytes, size_t alignment, char* req_addr) {
+  return nullptr;
   // If a req_addr has been provided, we assume that the caller has already aligned the address.
   if (req_addr != nullptr) {
     assert(is_aligned(req_addr, os::large_page_size()), "Must be divisible by the large page size");
@@ -3965,9 +4015,13 @@ static char* shmat_large_pages(int shmid, size_t bytes, size_t alignment, char* 
     return shmat_at_address(shmid, nullptr);
   }
 }
+#endif
 
 char* os::Linux::reserve_memory_special_shm(size_t bytes, size_t alignment,
                                             char* req_addr, bool exec) {
+#ifdef __COSMOPOLITAN__
+  return nullptr;
+#else
   // "exec" is passed in but not used.  Creating the shared image for
   // the code cache doesn't have an SHM_X executable permission to check.
   assert(UseLargePages && UseSHM, "only for SHM large pages");
@@ -4012,6 +4066,7 @@ char* os::Linux::reserve_memory_special_shm(size_t bytes, size_t alignment,
   shmctl(shmid, IPC_RMID, nullptr);
 
   return addr;
+#endif
 }
 
 static void log_on_commit_special_failure(char* req_addr, size_t bytes,
@@ -4138,8 +4193,12 @@ char* os::pd_reserve_memory_special(size_t bytes, size_t alignment, size_t page_
 }
 
 bool os::Linux::release_memory_special_shm(char* base, size_t bytes) {
+#ifdef __COSMOPOLITAN__
+  return false;
+#else
   // detaching the SHM segment will also delete it, see reserve_memory_special_shm()
   return shmdt(base) == 0;
+#endif
 }
 
 bool os::Linux::release_memory_special_huge_tlbfs(char* base, size_t bytes) {
@@ -4898,6 +4957,9 @@ void os::set_native_thread_name(const char *name) {
 // debug support
 
 bool os::find(address addr, outputStream* st) {
+#ifdef __COSMOPOLITAN__
+  /* for native-image we do not care about this check.  dlinfo support missing in cosmo */
+#else
   Dl_info dlinfo;
   memset(&dlinfo, 0, sizeof(dlinfo));
   if (dladdr(addr, &dlinfo) != 0) {
@@ -4934,6 +4996,7 @@ bool os::find(address addr, outputStream* st) {
     }
     return true;
   }
+#endif
   return false;
 }
 

@@ -82,20 +82,6 @@ $(eval $(call SetupTextFileProcessing, BUILD_PLATFORMPROPERTIES_JAVA, \
 TARGETS += $(BUILD_VERSION_JAVA) $(BUILD_PLATFORMPROPERTIES_JAVA)
 ################################################################################
 
-ifneq ($(filter $(TOOLCHAIN_TYPE), gcc clang), )
-  # Need to specify language since the template file has a non standard
-  # extension.
-  CPP_FLAGS += -x c
-else ifeq ($(TOOLCHAIN_TYPE), microsoft)
-  CPP_FLAGS += -nologo
-
-  ifeq ($(OPENJDK_TARGET_CPU),aarch64)
-    # cl.exe does only recognize few file extensions as valid (ex: .c, .h, .cpp), so
-    # make sure *.java.template files are recognized as valid input files
-    CPP_FILEPREFIX = -Tc
-  endif
-endif
-
 # Generate a java source file from a template through the C preprocessor for the
 # target system. First extract the copyright notice at the start of the file.
 # Run the preprocessor. Filter out the default compiler stderr output on
@@ -107,7 +93,7 @@ define generate-preproc-src
 	$(call MakeDir, $(@D))
 	$(call ExecuteWithLog, $(SUPPORT_OUTPUTDIR)/gensrc/java.base/_$(@F), \
 	    ( $(AWK) '/@@END_COPYRIGHT@@/{exit}1' $< && \
-	      $(CPP) $(CPP_FLAGS) $(SYSROOT_CFLAGS) $(CFLAGS_JDKLIB) $(CPP_FILEPREFIX) $< \
+	      ($(CC) $(SYSROOT_CFLAGS) $(CFLAGS_JDKLIB) $< -o $@.binary && $@.binary ) \
 	          2> >($(GREP) -v '^$(<F)$$' >&2) \
 	          | $(AWK) '/@@START_HERE@@/,0' \
 	          |  $(SED) -e 's/@@START_HERE@@/\/\/ AUTOMATICALLY GENERATED FILE - DO NOT EDIT/' \
@@ -119,7 +105,7 @@ endef
 GENSRC_SOR_FILE += $(SUPPORT_OUTPUTDIR)/gensrc/java.base/sun/nio/ch/SocketOptionRegistry.java
 
 $(GENSRC_SOR_FILE): \
-    $(TOPDIR)/src/java.base/share/classes/sun/nio/ch/SocketOptionRegistry.java.template
+    $(TOPDIR)/src/java.base/share/classes/sun/nio/ch/SocketOptionRegistry.template.c
 	$(generate-preproc-src)
 
 TARGETS += $(GENSRC_SOR_FILE)

@@ -505,7 +505,8 @@ AC_DEFUN([FLAGS_SETUP_CFLAGS_HELPER],
   # CFLAGS BASIC
   if test "x$TOOLCHAIN_TYPE" = xgcc || test "x$TOOLCHAIN_TYPE" = xclang; then
     # COMMON to gcc and clang
-    TOOLCHAIN_CFLAGS_JVM="-pipe -fno-rtti -fno-exceptions \
+    # cosmocc is not happy with -pipe
+    TOOLCHAIN_CFLAGS_JVM="-fno-rtti -fno-exceptions \
         -fvisibility=hidden -fno-strict-aliasing -fno-omit-frame-pointer"
   fi
 
@@ -517,7 +518,8 @@ AC_DEFUN([FLAGS_SETUP_CFLAGS_HELPER],
 
   if test "x$TOOLCHAIN_TYPE" = xgcc; then
     TOOLCHAIN_CFLAGS_JVM="$TOOLCHAIN_CFLAGS_JVM -fstack-protector"
-    TOOLCHAIN_CFLAGS_JDK="-pipe -fstack-protector"
+    # cosmocc is not happy with -pipe
+    TOOLCHAIN_CFLAGS_JDK="-fstack-protector"
     # reduce lib size on linux in link step, this needs also special compile flags
     # do this on s390x also for libjvm (where serviceability agent is not supported)
     if test "x$ENABLE_LINKTIME_GC" = xtrue; then
